@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Weather App</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <h1>Weather App</h1>
+    <div class="search">
+      <input type="text" id="city-input" placeholder="Enter city name..." />
+      <button id="search-btn">Search</button>
+    </div>
+    <div class="weather-details">
+      <h2 id="city-name">Weather Info</h2>
+      <p id="temperature"></p>
+      <p id="weather-description"></p>
+      <button id="temp-toggle">°C / °F</button>
+      <div id="forecast"></div>
+    </div>
+  </div>
+  <script>
+const API_KEY = "efa633e2d6c1e7c9fc5b174d5f6d74ff";
+const apiBase = "https://api.openweathermap.org/data/2.5/";
+
+let isCelsius = true;
+
+
+function fetchWeatherByLocation(lat, lon) {
+  fetch(`${apiBase}weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)
+    .then((response) => response.json())
+    .then((data) => displayWeather(data))
+    .catch((error) => console.error("Error fetching weather data:", error));
+}
+
+
+function fetchWeatherByCity(city) {
+  fetch(`${apiBase}weather?q=${city}&units=metric&appid=${API_KEY}`)
+    .then((response) => response.json())
+    .then((data) => displayWeather(data))
+    .catch((error) => alert("City not found"));
+}
+
+
+function displayWeather(data) {
+  const cityName = document.getElementById("city-name");
+  const temperature = document.getElementById("temperature");
+  const weatherDescription = document.getElementById("weather-description");
+
+  cityName.textContent = data.name;
+  temperature.textContent = `Temperature: ${data.main.temp}°C`;
+  weatherDescription.textContent = `Weather: ${data.weather[0].description}`;
+
+  changeBackground(data.weather[0].main);
+  fetchWeatherForecast(data.coord.lat, data.coord.lon);
+}
+
+
+function fetchWeatherForecast(lat, lon) {
+  fetch(`${apiBase}forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`)
+    .then((response) => response.json())
+    .then((data) => displayForecast(data.list))
+    .catch((error) => console.error("Error fetching forecast data:", error));
+}
+
+
+function displayForecast(forecast) {
+  const forecastContainer = document.getElementById("forecast");
+  forecastContainer.innerHTML = ""; // Clear previous forecast
+  forecast.slice(0, 5).forEach((day) => {
+    const date = new Date(day.dt * 1000);
+    const forecastDay = document.createElement("div");
+    forecastDay.className = "forecast-day";
+    forecastDay.innerHTML = `
+      <h4>${date.toLocaleDateString(undefined, { weekday: "short" })}</h4>
+      <img src="https://openweathermap.org/img/wn/${day.weather[0].icon}.png" alt="${day.weather[0].description}">
+      <p>${day.main.temp}°C</p>
+    `;
+    forecastContainer.appendChild(forecastDay);
+  });
+}
+
+
+function changeBackground(weatherCondition) {
+  const body = document.body;
+  if (weatherCondition.includes("Clear")) {
+    body.style.background = "linear-gradient(to right, #f7b733, #fc4a1a)";
+  } else if (weatherCondition.includes("Clouds")) {
+    body.style.background = "linear-gradient(to right, #bdc3c7, #2c3e50)";
+  } else if (weatherCondition.includes("Rain")) {
+    body.style.background = "linear-gradient(to right, #00c6ff, #0072ff)";
+  } else {
+    body.style.background = "linear-gradient(to right, #6dd5fa, #2980b9)";
+  }
+}
+
+
+function toggleTemperature() {
+  const temperature = document.getElementById("temperature");
+  const currentTemp = parseFloat(temperature.textContent.match(/-?\d+(\.\d+)?/)[0]);
+  if (isCelsius) {
+    temperature.textContent = `Temperature: ${(currentTemp * 1.8 + 32).toFixed(1)}°F`;
+  } else {
+    temperature.textContent = `Temperature: ${((currentTemp - 32) / 1.8).toFixed(1)}°C`;
+  }
+  isCelsius = !isCelsius;
+}
+
+
+document.getElementById("search-btn").addEventListener("click", () => {
+  const city = document.getElementById("city-input").value;
+  if (city) fetchWeatherByCity(city);
+});
+
+document.getElementById("temp-toggle").addEventListener("click", toggleTemperature);
+
+
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+      fetchWeatherByLocation(latitude, longitude);
+    },
+    (error) => console.error("Error getting location:", error)
+  );
+} else {
+  alert("Geolocation is not supported by your browser.");
+}
+
+  </script>
+</body>
+</html>
